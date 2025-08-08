@@ -1,88 +1,86 @@
+// Fil: src/App.jsx (ersätt din nuvarande med denna utökade)
+import { useEffect, useState } from "react";
+import UpgradeBanner from "./components/UpgradeBanner";
+import StudentVerify from "./components/StudentVerify";
+import UploadManager from "./components/UploadManager";
+import { DAILY_FREE_LIMIT, getUser, setUser, resetDailyCounter } from "./store";
 
-import { useState } from "react";
+export default function App() {
+    const [user, setUserState] = useState(getUser());
+    const [showVerify, setShowVerify] = useState(false);
+    const [darkMode, setDarkMode] = useState(false);
 
-export default function Arkitekt30Mockup() {
-  const [downloads, setDownloads] = useState(0);
-  const MAX_FREE_DOWNLOADS = 5;
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isStudent, setIsStudent] = useState(false);
+    useEffect(() => {
+        const updated = resetDailyCounter({ ...user });
+        setUser(updated); setUserState(updated);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-  const handleDownload = () => {
-    if (!isLoggedIn) {
-      alert("Du måste logga in för att ladda ner.");
-      return;
-    }
-    if (!isStudent && downloads >= MAX_FREE_DOWNLOADS) {
-      alert("Du har nått gränsen för gratinerladdningar idag. Uppgradera till Pro eller kom tillbaka imorgon.");
-      return;
-    }
-    setDownloads(downloads + 1);
-    alert("Nedladdning påbörjad!");
-  };
+    const login = () => {
+        const u = { ...user, email: user.email || "demo@user.com" };
+        setUser(u); setUserState(u);
+    };
+    const logout = () => { const blank = { email: null, plan: "free", verifiedStudent: false, downloadsToday: 0, downloadsDate: null }; setUser(blank); setUserState(blank); };
 
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-  };
+    const handleDownload = () => {
+        const u = resetDailyCounter({ ...getUser() });
+        if (!u.email) { alert("Logga in först"); return; }
+        if (!u.verifiedStudent && u.plan !== "pro" && u.downloadsToday >= DAILY_FREE_LIMIT) {
+            alert("Du har nått gränsen för gratisnedladdningar idag.");
+            return;
+        }
+        u.downloadsToday += 1; setUser(u); setUserState(u);
+        alert("Nedladdning påbörjad!");
+    };
 
-  const handleStudentRegister = () => {
-    setIsLoggedIn(true);
-    setIsStudent(true);
-  };
+    return (
+        <div className={darkMode ? "dark" : ""}>
+            <button onClick={() => setDarkMode(!darkMode)} className="fixed top-4 right-4 bg-secondary text-primary px-4 py-2 rounded-md shadow">
+                {darkMode ? '☀️ Ljust läge' : '🌙 Mörkt läge'}
+            </button>
 
-  return (
-    <div className="min-h-screen bg-background text-primary">
-      {/* Hero Section */}
-      <section className="text-center py-20 bg-secondary">
-        <h1 className="text-4xl font-bold mb-4">Från teori till praktik</h1>
-        <p className="text-lg max-w-2xl mx-auto">
-          Inspirerad av boken <em>Arkitekt 3.0</em>, ger denna plattform dig nedladdningsbara Revit- och Archicad-exempel för varje fas i projekteringsarbetet.
-        </p>
-        <div className="mt-6 space-x-4">
-          <button onClick={() => alert("Innehållet kommer snart!")} className="px-6 py-3 rounded-md shadow bg-primary text-background">Utforska innehållet</button>
-          <button onClick={handleLogin} className="px-6 py-3 rounded-md shadow border border-primary text-primary">Logga in</button>
-        </div>
-      </section>
+            <div className="min-h-screen bg-background text-primary">
+                <header className="p-4 flex items-center justify-between">
+                    <div className="font-semibold">Arkitekt 3.0 Digital</div>
+                    <div className="flex items-center gap-3">
+                        {user.email ? (
+                            <>
+                                <span className="text-sm text-secondary">{user.email} • {user.verifiedStudent ? 'Student' : user.plan.toUpperCase()}</span>
+                                <button onClick={logout} className="px-3 py-2 rounded-md border">Logga ut</button>
+                            </>
+                        ) : (
+                            <button onClick={login} className="px-3 py-2 rounded-md border">Logga in</button>
+                        )}
+                        <button onClick={() => setShowVerify(true)} className="px-3 py-2 rounded-md bg-primary text-background">Verifiera student</button>
+                    </div>
+                </header>
 
-      {/* Navigation / Phase Overview */}
-      <section className="grid md:grid-cols-3 gap-8 p-10">
-        {["Förstudie", "Systemhandling", "Bygghandling", "Produktion", "Digital leverans"].map((phase) => (
-          <div key={phase} className="bg-background shadow rounded-md p-6 hover:shadow-lg transition">
-            <h2 className="text-xl font-semibold mb-2">{phase}</h2>
-            <p className="text-sm text-secondary mb-4">Kort introduktion till {phase.toLowerCase()} med länkar till relevanta exempel.</p>
-            <button className="text-sm text-blue-600 hover:underline">Visa exempel</button>
-          </div>
-        ))}
-      </section>
+                <UpgradeBanner />
 
-      {/* Content Block */}
-      <section className="bg-secondary py-12 px-6">
-        <h2 className="text-2xl font-bold text-center mb-8">Revit & Archicad-exempel</h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-background p-6 rounded-md shadow hover:shadow-md transition">
-              <div className="h-40 bg-accent rounded mb-4"></div>
-              <h3 className="text-lg font-semibold mb-1">Fasadkomposition {i}</h3>
-              <p className="text-sm text-secondary">.RVT / .PLN • Densitet: Hög • Skede: Bygghandling</p>
-              <button onClick={handleDownload} className="mt-3 text-sm text-blue-600 hover:underline">Ladda ner</button>
+                <main className="p-6 space-y-12">
+                    <section className="text-center py-12 bg-secondary rounded-md">
+                        <h1 className="text-3xl font-bold mb-2">Från teori till praktik</h1>
+                        <p className="text-sm text-secondary max-w-2xl mx-auto">Nedladdningsbara Revit- och Archicad-exempel, med freemium och studentläge.</p>
+                        <div className="mt-4">
+                            <button onClick={handleDownload} className="px-6 py-3 rounded-md shadow bg-primary text-background">Prova en nedladdning</button>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h2 className="text-xl font-semibold mb-3">Ladda upp & metadata (demo)</h2>
+                        <UploadManager />
+                    </section>
+                </main>
+
+                <footer className="text-center py-6 text-sm text-secondary">&copy; {new Date().getFullYear()} Arkitekt 3.0 Digital</footer>
             </div>
-          ))}
+
+            {showVerify && <StudentVerify onClose={() => setShowVerify(false)} />}
         </div>
-        <p className="text-center mt-6 text-sm text-secondary">
-          Nedladdningar idag: {downloads} / {isStudent ? "Obegränsat (student)" : MAX_FREE_DOWNLOADS}
-        </p>
-      </section>
-
-      {/* Call to Action */}
-      <section className="text-center py-16 bg-primary text-background">
-        <h2 className="text-2xl font-bold mb-2">Gratis för studenter – alltid</h2>
-        <p className="mb-4">Verifiera din e-postadress från skolan och få fri tillgång till allt innehåll.</p>
-        <button onClick={handleStudentRegister} className="bg-background text-primary px-6 py-3 rounded-md shadow">Registrera studentkonto</button>
-      </section>
-
-      {/* Footer */}
-      <footer className="text-center py-6 text-sm text-secondary">
-        &copy; {new Date().getFullYear()} Arkitekt 3.0 Digital – Ett initiativ för praktiskt lärande
-      </footer>
-    </div>
-  );
+    );
 }
+
+// Fil: .env (lägg i Vercel Environment Variables i stället)
+// VITE_PAYMENT_LINK_URL=https://buy.stripe.com/XXXXXXXXXXXX  // Skapa i Stripe Dashboard → Payment Links
+
+// ===== Slut på patch =====
